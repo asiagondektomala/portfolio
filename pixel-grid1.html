@@ -19,7 +19,7 @@ html, body { width: 100%; height: 100%; background: transparent; }
 }
 @keyframes blink {
   0%,100% { opacity: 0; }
-  50% { opacity: 1; }
+  45%, 55% { opacity: 1; }
 }
 </style>
 </head>
@@ -27,22 +27,59 @@ html, body { width: 100%; height: 100%; background: transparent; }
 <div class="wrap" id="g"></div>
 <script>
 var COLS = 8, ROWS = 6, SQ = 38;
-var COLORS = ['rgba(116,245,161,1)','rgba(116,245,161,0.6)','rgba(116,245,161,0.2)'];
+var CX = (COLS - 1) / 2;
+var CY = (ROWS - 1) / 2;
+var COLORS = [
+  'rgba(116,245,161,1)',
+  'rgba(116,245,161,0.7)',
+  'rgba(116,245,161,0.4)'
+];
+
 var wrap = document.getElementById('g');
 var frag = document.createDocumentFragment();
+
+// Precompute cells sorted by distance from center
+var cells = [];
 for (var r = 0; r < ROWS; r++) {
   for (var c = 0; c < COLS; c++) {
-    if (Math.random() > 0.3) continue;
-    var d = document.createElement('div');
-    d.className = 'px';
-    d.style.left = (c * SQ) + 'px';
-    d.style.top = (r * SQ) + 'px';
-    d.style.backgroundColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-    d.style.animationDuration = (1.5 + Math.random() * 4).toFixed(2) + 's';
-    d.style.animationDelay = (Math.random() * 6).toFixed(2) + 's';
-    frag.appendChild(d);
+    var dx = c - CX, dy = r - CY;
+    var dist = Math.sqrt(dx*dx + dy*dy);
+    cells.push({r:r, c:c, dist:dist});
   }
 }
+
+// Sort by distance — nearest to center first
+cells.sort(function(a,b){ return a.dist - b.dist; });
+
+var maxDist = cells[cells.length-1].dist;
+
+cells.forEach(function(cell) {
+  // Probability: high near center, drops off with distance
+  var prob = Math.pow(1 - cell.dist / (maxDist + 0.5), 1.2);
+  if (Math.random() > prob) return;
+
+  var d = document.createElement('div');
+  d.className = 'px';
+  d.style.left = (cell.c * SQ) + 'px';
+  d.style.top = (cell.r * SQ) + 'px';
+
+  // Cells near center get brighter, more opaque color
+  var colorIdx = cell.dist < 1.5 ? 0 : cell.dist < 2.5 ? 1 : 2;
+  d.style.backgroundColor = COLORS[colorIdx];
+
+  // Cluster timing: nearby cells animate together (similar period+delay)
+  // Base duration varies slowly across the grid
+  var baseDur = 2 + cell.dist * 0.4;
+  var dur = (baseDur + Math.random() * 1.5).toFixed(2);
+  // Delay clusters cells: cells near center share a tighter delay window
+  var delayBase = cell.dist * 0.3;
+  var delay = (delayBase + Math.random() * 2).toFixed(2);
+
+  d.style.animationDuration = dur + 's';
+  d.style.animationDelay = delay + 's';
+  frag.appendChild(d);
+});
+
 wrap.appendChild(frag);
 </script>
 </body>

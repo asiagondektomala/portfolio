@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(function(){
+  var SQ=38, COLORS=["rgba(116,245,161,1)","rgba(116,245,161,0.6)","rgba(116,245,161,0.2)"];
+  var c=document.getElementById('c'), ctx=c.getContext('2d');
+  var cols,rows,blocks=[],tweens={},last=null;
+
+  function setup(){
+    var W=window.innerWidth, H=window.innerHeight;
+    c.width=W; c.height=H;
+    cols=Math.ceil(W/SQ); rows=Math.ceil(H/SQ);
+    blocks=[]; tweens={}; last=null;
+    for(var r=0;r<rows;r++) for(var cc=0;cc<cols;cc++)
+      blocks.push({x:cc*SQ,y:r*SQ,color:COLORS[0],alpha:0});
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    for(var i=0;i<blocks.length;i++){
+      var b=blocks[i]; if(b.alpha<0.005) continue;
+      ctx.globalAlpha=b.alpha; ctx.fillStyle=b.color;
+      ctx.fillRect(b.x,b.y,SQ,SQ);
+    }
+    ctx.globalAlpha=1;
+    requestAnimationFrame(draw);
+  }
+
+  function go(idx,to,dur,delay){
+    if(tweens[idx]) tweens[idx].dead=true;
+    var t={dead:false}; tweens[idx]=t;
+    setTimeout(function(){
+      if(t.dead) return;
+      var b=blocks[idx], from=b.alpha, s=null;
+      (function step(ts){
+        if(t.dead) return;
+        if(!s) s=ts;
+        var p=Math.min((ts-s)/dur,1), e=p<.5?2*p*p:-1+(4-2*p)*p;
+        b.alpha=from+(to-from)*e;
+        p<1?requestAnimationFrame(step):(b.alpha=to,delete tweens[idx]);
+      })(performance.now());
+    },delay);
+  }
+
+  document.addEventListener('mousemove',function(e){
+    var idx=Math.floor(e.clientY/SQ)*cols+Math.floor(e.clientX/SQ);
+    if(idx<0||idx>=blocks.length||idx===last) return;
+    last=idx; blocks[idx].color=COLORS[Math.floor(Math.random()*COLORS.length)];
+    go(idx,1,100,0); go(idx,0,200,250);
+  });
+
+  var timer;
+  window.addEventListener('resize',function(){clearTimeout(timer);timer=setTimeout(setup,150);});
+  setup(); draw();
+})();
+</script>
+</body>
+</html>

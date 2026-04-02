@@ -5,80 +5,87 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; background: transparent; }
-.wrap {
-  position: relative;
-  width: 304px;
-  height: 228px;
-}
+.wrap { position: relative; width: 304px; height: 228px; }
 .px {
   position: absolute;
   width: 38px;
   height: 38px;
   opacity: 0;
-  animation: blink linear infinite;
+  animation: blink ease-in-out infinite;
 }
 @keyframes blink {
-  0%,100% { opacity: 0; }
-  45%, 55% { opacity: 1; }
+  0%, 100% { opacity: 0; }
+  40%, 60% { opacity: 1; }
 }
 </style>
 </head>
 <body>
 <div class="wrap" id="g"></div>
 <script>
-var COLS = 8, ROWS = 6, SQ = 38;
-var CX = (COLS - 1) / 2;
-var CY = (ROWS - 1) / 2;
+var SQ = 38;
+var COLS = 8, ROWS = 6;
 var COLORS = [
   'rgba(116,245,161,1)',
-  'rgba(116,245,161,0.7)',
-  'rgba(116,245,161,0.4)'
+  'rgba(116,245,161,0.75)',
+  'rgba(116,245,161,0.45)'
+];
+
+// Define which cells belong to the blob
+// 1 = full, 0.5 = half opacity variant, 0 = off
+// Grid is 8 cols x 6 rows, blob centered
+var BLOB = [
+  [0,0,0,0,0,0,0,0],
+  [0,0,0,1,1,0,0,0],
+  [0,0,1,1,1,1,0,0],
+  [0,0,1,1,1,1,0,0],
+  [0,0,0,1,1,0,0,0],
+  [0,0,0,0,0,0,0,0],
+];
+
+// Edge cells around the blob that occasionally flicker
+var EDGE = [
+  [0,0,0,0,0,0,0,0],
+  [0,0,1,0,0,1,0,0],
+  [0,1,0,0,0,0,1,0],
+  [0,1,0,0,0,0,1,0],
+  [0,0,1,0,0,1,0,0],
+  [0,0,0,0,0,0,0,0],
 ];
 
 var wrap = document.getElementById('g');
 var frag = document.createDocumentFragment();
 
-// Precompute cells sorted by distance from center
-var cells = [];
+// Shared pulse period — all core cells animate together
+var SHARED_DUR = 2.4;
+var SHARED_DELAY_BASE = 0;
+
 for (var r = 0; r < ROWS; r++) {
   for (var c = 0; c < COLS; c++) {
-    var dx = c - CX, dy = r - CY;
-    var dist = Math.sqrt(dx*dx + dy*dy);
-    cells.push({r:r, c:c, dist:dist});
+    var isCore = BLOB[r][c] === 1;
+    var isEdge = EDGE[r][c] === 1;
+    if (!isCore && !isEdge) continue;
+
+    var d = document.createElement('div');
+    d.className = 'px';
+    d.style.left = (c * SQ) + 'px';
+    d.style.top = (r * SQ) + 'px';
+
+    if (isCore) {
+      // Core cells: all same duration, tiny delay variation so they pulse as one
+      d.style.backgroundColor = COLORS[Math.floor(Math.random() * 2)];
+      d.style.animationDuration = SHARED_DUR + 's';
+      // Very small random offset so they're almost in sync
+      d.style.animationDelay = (SHARED_DELAY_BASE + (Math.random() * 0.3)).toFixed(2) + 's';
+    } else {
+      // Edge cells: slower, more random, dimmer — stray pixels
+      d.style.backgroundColor = COLORS[2];
+      d.style.animationDuration = (3 + Math.random() * 2).toFixed(2) + 's';
+      d.style.animationDelay = (Math.random() * 4).toFixed(2) + 's';
+    }
+
+    frag.appendChild(d);
   }
 }
-
-// Sort by distance — nearest to center first
-cells.sort(function(a,b){ return a.dist - b.dist; });
-
-var maxDist = cells[cells.length-1].dist;
-
-cells.forEach(function(cell) {
-  // Probability: high near center, drops off with distance
-  var prob = Math.pow(1 - cell.dist / (maxDist + 0.5), 1.2);
-  if (Math.random() > prob) return;
-
-  var d = document.createElement('div');
-  d.className = 'px';
-  d.style.left = (cell.c * SQ) + 'px';
-  d.style.top = (cell.r * SQ) + 'px';
-
-  // Cells near center get brighter, more opaque color
-  var colorIdx = cell.dist < 1.5 ? 0 : cell.dist < 2.5 ? 1 : 2;
-  d.style.backgroundColor = COLORS[colorIdx];
-
-  // Cluster timing: nearby cells animate together (similar period+delay)
-  // Base duration varies slowly across the grid
-  var baseDur = 2 + cell.dist * 0.4;
-  var dur = (baseDur + Math.random() * 1.5).toFixed(2);
-  // Delay clusters cells: cells near center share a tighter delay window
-  var delayBase = cell.dist * 0.3;
-  var delay = (delayBase + Math.random() * 2).toFixed(2);
-
-  d.style.animationDuration = dur + 's';
-  d.style.animationDelay = delay + 's';
-  frag.appendChild(d);
-});
 
 wrap.appendChild(frag);
 </script>

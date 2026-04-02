@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: transparent; }
+.px {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  opacity: 0;
+  animation: blink linear infinite;
+}
+@keyframes blink {
+  0%,100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+</style>
+</head>
+<body>
+<script>
+var SQ = 38;
+var COLORS = ['rgba(116,245,161,1)','rgba(116,245,161,0.6)','rgba(116,245,161,0.2)'];
+
+function build() {
+  document.body.innerHTML = '';
+  var W = window.innerWidth;
+  var H = window.innerHeight;
+  var cols = Math.ceil(W / SQ);
+  var rows = Math.ceil(H / SQ);
+  var frag = document.createDocumentFragment();
+  for (var r = 0; r < rows; r++) {
+    for (var c = 0; c < cols; c++) {
+      if (Math.random() > 0.15) continue;
+      var d = document.createElement('div');
+      d.className = 'px';
+      d.style.left = (c * SQ) + 'px';
+      d.style.top = (r * SQ) + 'px';
+      d.style.backgroundColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+      d.style.animationDuration = (1.5 + Math.random() * 4).toFixed(2) + 's';
+      d.style.animationDelay = (Math.random() * 6).toFixed(2) + 's';
+      frag.appendChild(d);
+    }
+  }
+  document.body.appendChild(frag);
+}
+
+build();
+window.addEventListener('resize', build);
+</script>
+</body>
+</html>

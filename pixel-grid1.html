@@ -5,7 +5,7 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; background: transparent; }
-.wrap { position: relative; width: 304px; height: 228px; }
+.wrap { position: relative; width: 532px; height: 456px; }
 .px {
   position: absolute;
   width: 38px;
@@ -22,29 +22,13 @@ html, body { width: 100%; height: 100%; background: transparent; }
 <body>
 <div class="wrap" id="g"></div>
 <script>
-var SQ = 38, COLS = 8, ROWS = 6;
+var SQ = 38, COLS = 14, ROWS = 12;
+var CX = (COLS - 1) / 2;
+var CY = (ROWS - 1) / 2;
 var COLORS = [
   'rgba(116,245,161,1)',
-  'rgba(116,245,161,0.7)',
-  'rgba(116,245,161,0.35)'
-];
-
-var CORE = [
-  [0,0,0,0,0,0,0,0],
-  [0,0,0,1,1,0,0,0],
-  [0,0,1,1,1,1,0,0],
-  [0,0,1,1,1,1,0,0],
-  [0,0,0,1,1,0,0,0],
-  [0,0,0,0,0,0,0,0]
-];
-
-var SCATTER = [
-  [0,0,0,1,1,0,0,0],
-  [0,0,1,0,0,1,0,0],
-  [0,1,0,0,0,0,1,0],
-  [0,1,0,0,0,0,1,0],
-  [0,0,1,0,0,1,0,0],
-  [0,0,0,1,1,0,0,0]
+  'rgba(116,245,161,0.65)',
+  'rgba(116,245,161,0.3)'
 ];
 
 var wrap = document.getElementById('g');
@@ -52,23 +36,33 @@ var frag = document.createDocumentFragment();
 
 for (var r = 0; r < ROWS; r++) {
   for (var c = 0; c < COLS; c++) {
-    var isCore = CORE[r][c] === 1;
-    var isScatter = SCATTER[r][c] === 1;
-    if (!isCore && !isScatter) continue;
-    if (!isCore && Math.random() > 0.6) continue;
+    var dx = c - CX, dy = r - CY;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var maxDist = Math.sqrt(CX * CX + CY * CY);
+
+    // Soft gradient probability — still plenty of scatter at edges
+    // center ~70% chance, edge ~20% chance
+    var prob = 0.2 + 0.5 * Math.pow(1 - dist / maxDist, 0.8);
+
+    if (Math.random() > prob) continue;
+
     var d = document.createElement('div');
     d.className = 'px';
     d.style.left = (c * SQ) + 'px';
     d.style.top = (r * SQ) + 'px';
-    if (isCore) {
-      d.style.backgroundColor = COLORS[Math.random() < 0.6 ? 0 : 1];
-      d.style.animationDuration = '2.4s';
-      d.style.animationDelay = (Math.random() * 0.25).toFixed(2) + 's';
-    } else {
-      d.style.backgroundColor = COLORS[Math.random() < 0.5 ? 1 : 2];
-      d.style.animationDuration = (2.8 + Math.random() * 2.5).toFixed(2) + 's';
-      d.style.animationDelay = (Math.random() * 5).toFixed(2) + 's';
-    }
+
+    // Color: brighter near center, dimmer toward edges
+    var colorIdx = dist < 2 ? 0 : dist < 4 ? 1 : 2;
+    // Add some randomness to color so not purely distance-based
+    if (Math.random() < 0.35) colorIdx = Math.min(2, colorIdx + 1);
+    d.style.backgroundColor = COLORS[colorIdx];
+
+    // Timing: fully independent per cell — irregular, not synchronized
+    var dur = (1.8 + Math.random() * 3.5).toFixed(2);
+    var delay = (Math.random() * 7).toFixed(2);
+    d.style.animationDuration = dur + 's';
+    d.style.animationDelay = delay + 's';
+
     frag.appendChild(d);
   }
 }
